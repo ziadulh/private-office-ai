@@ -1,0 +1,31 @@
+services:
+  poai_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: poai_app
+    working_dir: /var/www/html
+    volumes:
+      - ./src:/var/www/html
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - poai_network
+
+  poai_nginx:
+    image: nginx:alpine
+    container_name: poai_nginx
+    ports:
+      - "8085:80"
+    volumes:
+      - ./src:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - poai_app
+    networks:
+      - poai_network
+
+networks:
+  poai_network:
+    name: poai_network
+    driver: bridge
