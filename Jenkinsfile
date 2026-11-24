@@ -36,11 +36,17 @@ pipeline {
                     docker run -d \
                       --name poai_app \
                       --network poai_network \
+                      --add-host=host.docker.internal:host-gateway \
                       -v poai_public_data:/var/www/html/public \
+                      -e APP_ENV=local \
+                      -e APP_DEBUG=true \
                       -e APP_KEY=base64:2fl+Ktvkfl+Fuz4Qp/A75G2RTiWVA/ZoKZvp6fiiM10= \
                       ${IMAGE_NAME}:latest
 
-                    # ২. Nginx কন্টেইনার চালু করা
+                    # ২. .env তৈরি, SQLite ফাইল তৈরি ও মাইগ্রেশন চালানো
+                    docker exec poai_app sh -c "cp -n .env.example .env || true && mkdir -p database && touch database/database.sqlite && chown -R www-data:www-data database storage bootstrap/cache && php artisan config:clear && php artisan migrate --force"
+
+                    # ৩. Nginx কন্টেইনার চালু ও কাস্টম কনফিগারেশন বসানো
                     docker run -d \
                       --name poai_nginx \
                       --network poai_network \
@@ -48,7 +54,6 @@ pipeline {
                       -v poai_public_data:/var/www/html/public:ro \
                       nginx:alpine
 
-                    # ৩. প্রজেক্টের ভেতরে থাকা কাস্টম Nginx কনফিগারেশন সরাসরি কন্টেইনারে কপি ও রিলোড করা
                     docker cp docker/nginx/default.conf poai_nginx:/etc/nginx/conf.d/default.conf
                     docker exec poai_nginx nginx -s reload
                 """
