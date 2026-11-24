@@ -32,6 +32,7 @@ pipeline {
                     docker volume create poai_public_data || true
                     docker rm -f poai_app poai_nginx || true
 
+                    # ১. অ্যাপ কন্টেইনার চালু করা
                     docker run -d \
                       --name poai_app \
                       --network poai_network \
@@ -39,12 +40,17 @@ pipeline {
                       -e APP_KEY=base64:2fl+Ktvkfl+Fuz4Qp/A75G2RTiWVA/ZoKZvp6fiiM10= \
                       ${IMAGE_NAME}:latest
 
+                    # ২. Nginx কন্টেইনার চালু করা
                     docker run -d \
                       --name poai_nginx \
                       --network poai_network \
                       -p 8085:80 \
                       -v poai_public_data:/var/www/html/public:ro \
                       nginx:alpine
+
+                    # ৩. প্রজেক্টের ভেতরে থাকা কাস্টম Nginx কনফিগারেশন সরাসরি কন্টেইনারে কপি ও রিলোড করা
+                    docker cp docker/nginx/default.conf poai_nginx:/etc/nginx/conf.d/default.conf
+                    docker exec poai_nginx nginx -s reload
                 """
             }
         }
